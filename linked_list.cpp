@@ -58,13 +58,11 @@ namespace linked_list {
                 throw std::runtime_error("cannot shift empty list");
             }
             //Node<T> *dummy= &Node<T>(-1); //likely not what people want, why assign a temporary?
-            Node<T> dd(-1);
-            Node<T> *dummy=&dd;
-            dummy->next=head->next;
-            int res=head->val;
-            delete head;
-            --cnt;
-            head=dummy->next;
+            Node<T>* old_head=head;
+            T res=std::move(head->val);
+            head=head->next;
+            delete old_head;
+            --cnt;            
             return res;
         }
 
