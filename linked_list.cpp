@@ -23,17 +23,23 @@ namespace linked_list {
             if(!head){
                 throw std::runtime_error("cannot pop empty list");
             }
-            Node<T> dd(-1);
-            Node<T>* dummy=&dd;
-            dummy->next=head;
+            
             Node<T>* curr=head;
+            Node<T>* prev=nullptr;
             while(curr->next){
-                dummy=curr; 
+                prev=curr; 
                 curr=curr->next;                   
             }
-            dummy->next=curr->next;
-            T res=curr->val;
-            delete curr;
+
+            if(prev){
+                //the while loop run at least once
+                prev->next=curr->next;
+            } else {
+                //there is only one node, remember to set head=nullptr or head will become a dangling ptr
+                head=nullptr;
+            }
+            T res=std::move(curr->val);
+            delete curr;            
             --cnt;
             return  res;
         }
