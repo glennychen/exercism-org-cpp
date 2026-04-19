@@ -46,9 +46,9 @@ namespace linked_list {
 
         template<typename T>
         void List<T>::unshift(T v){
-            Node<T>* node=new Node<T>(v);
-            node->next=head;
-            head=node;
+            Node<T>* n=new Node<T>(v);
+            n->next=head;
+            head=n;
             ++cnt;
         }
 
@@ -78,22 +78,21 @@ namespace linked_list {
 
         template<typename T>
         void List<T>::erase(T v){
-            Node<T> dd(-1);
-            Node<T>* dummy=&dd;
-            dummy->next=head;
+            Node<T> dummy{-1};
+            dummy.next=head;
+            Node<T>* prev=&dummy;
             Node<T>* curr=head;
             while(curr){
                 if(curr->val==v){
-                    dummy->next=curr->next;
+                    prev->next=curr->next; // this also update dummy.next, IF prev == dummy
                     delete curr;
                     --cnt;
+                    head=dummy.next;                    
                     return;
-                } else {
-                    dummy=curr;
-                    curr=curr->next;
                 }
+                prev=curr;
+                curr=curr->next;
             }
-            return;
         }
 
     template class List<int>; //
