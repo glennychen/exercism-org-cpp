@@ -15,19 +15,19 @@ namespace linked_list {
     class List{
         Node<T> *head=nullptr;
         Node<T> *tail=nullptr;
-        std::size_t cnt{0};
+        int cnt{0};
         //okay no custom constructor so no normal, copy, copy assignment, move, move assignemnt, destructor
         //using unquie_ptr is still a pain in doublely-linked list. do people actually do that in production?
         //using shared_ptr feels so slow....
         //"import std" ready when? 2099? we will be all dead in c++99
     public:
         void push(T v){
-            Node<T>* n=new Node<T>(v, nullptr, tail);
+            Node<T>* new_tail=new Node<T>(v, nullptr, tail);
             if(tail){
-                tail->next=n;
-                tail=n;
+                tail->next=new_tail;
+                tail=new_tail;
             } else {
-                head=tail=n;
+                head=tail=new_tail;
             }
             ++cnt;
         }
@@ -63,18 +63,18 @@ namespace linked_list {
         }
     
         void unshift(T v){
-            Node<T>* n=new Node<T>(v, head, nullptr);
+            Node<T>* new_head=new Node<T>(v, head, nullptr);
             if(head){
-                head->prev=n;
-                head=n;
+                head->prev=new_head;
+                head=new_head;
             } else {
-                head=tail=n;
+                head=tail=new_head;
             }            
             ++cnt;
         }
         
         int count(){
-            return static_cast<int>(cnt);
+            return cnt;
         }
     
         void erase(T v){
@@ -88,14 +88,14 @@ namespace linked_list {
                         curr->prev->next=curr->next;
                     } else {
                         head=curr->next;
-                        if(head) head->prev=nullptr; //house keeping new head->prev
+                        if(head) head->prev=nullptr; //isn't this necessary?house keeping new head->prev
                     }
                     
                     if(curr->next) {
                         curr->next->prev=curr->prev;
                     } else {
                         tail=curr->prev;
-                        if(tail) tail->next=nullptr; //house keeping new tail->next
+                        if(tail) tail->next=nullptr; //isn't this necessary?house keeping new tail->next
                     }
                     
                     delete curr;
