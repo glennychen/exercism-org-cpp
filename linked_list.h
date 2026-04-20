@@ -76,35 +76,34 @@ namespace linked_list {
             head=tail=nullptr;
             cnt=0;
          }
-    
-        T pop(){
-            if(!tail) { throw std::runtime_error("cannot pop empty list"); }
-            T res=std::move(tail->val);
-            Node<T>* old_tail=tail;
-            tail=tail->prev;
-            if(tail){
-                tail->next=nullptr;
-            } else{
-                head=tail=nullptr;               
+
+        T pop_shift_helper(Node<T>* target){
+            T res=std::move(target->val);
+            if(head==tail && head!=nullptr){
+                //only one node
+                head=tail=nullptr;
             }
-            delete old_tail;
+            if(target==tail){
+                tail=tail->prev;
+                tail->next=nullptr;
+            } else if(target==head){
+                head=head->next;
+                head->prev=nullptr;
+            }
+           
+            delete target;
             --cnt;
             return res;
         }
     
+        T pop(){
+            if(!tail) {throw std::runtime_error("cannot pop empty list");}
+            return pop_shift_helper(tail);         
+        }
+    
         T shift(){
             if(!head) {throw std::runtime_error("cannot shift empty list");}
-            Node<T>* old_head=head;
-            T res=std::move(head->val);
-            head=head->next;
-            if(head){
-                head->prev=nullptr;
-            } else {
-                head=tail=nullptr;
-            }
-            delete old_head;
-            --cnt;           
-            return res; //copy elision? Jason said which c++ standardd is guaranteed? or just return by value almost always like usual?
+            return pop_shift_helper(head);         
         }
 
         void push_unshift_helper(T v, Node<T>* next=nullptr, Node<T>* prev=nullptr){
