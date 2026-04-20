@@ -76,17 +76,6 @@ namespace linked_list {
             head=tail=nullptr;
             cnt=0;
          }
-
-        void push(T v){
-            Node<T>* new_tail=new Node<T>(v, nullptr, tail);
-            if(tail){
-                tail->next=new_tail;
-                tail=new_tail;
-            } else {
-                head=tail=new_tail;
-            }
-            ++cnt;
-        }
     
         T pop(){
             if(!tail) { throw std::runtime_error("cannot pop empty list"); }
@@ -117,16 +106,26 @@ namespace linked_list {
             --cnt;           
             return res; //copy elision? Jason said which c++ standardd is guaranteed? or just return by value almost always like usual?
         }
-    
-        void unshift(T v){
-            Node<T>* new_head=new Node<T>(v, head, nullptr);
-            if(head){
-                head->prev=new_head;
-                head=new_head;
+
+        void push_unshift_helper(T v, Node<T>* next=nullptr, Node<T>* prev=nullptr){
+            Node<T>* new_node=new Node<T>(v, next, prev);
+            if(prev){
+                tail->next=new_node;
+                tail=new_node;
+            } else if(next){
+                head->prev=new_node;
+                head=new_node;
             } else {
-                head=tail=new_head;
-            }            
+                head=tail=new_node;
+            }
             ++cnt;
+        }
+        void push(T v){
+            push_unshift_helper(v, nullptr, tail);
+        }
+    
+        void unshift(T v){           
+            push_unshift_helper(v, head, nullptr);
         }
         
         int count(){
