@@ -27,17 +27,20 @@ namespace linked_list {
             }
         }
         List& operator=(const List& rhs){           
-            if(this==&rhs) return *this; //compare the actual memory
+            if(this==&rhs) return *this; //compare the actual memory location
 
-            //so I don't have to copy node manually....
+            // use copy constructor
             List<T> copy(rhs); 
 
-            //use swap so the local copy will clean up itself along with the old data we swap into 
+            // move the new copy in, and move the old data into the copy
+            // so the local "copy" will self-destruct with the old data
             std::swap(head,copy.head);
             std::swap(tail,copy.tail);
             std::swap(cnt,copy.cnt);
+            
             //but I might already allocate a lot of Nodes, what is the strategy to reuse them?
-            //but it's a pain to handle the list_1.cnt!=list_2.cnt.....
+            //in particualr, what if the count of rhs is not equal to lhs? messy implmentation incoming...
+            
             return *this;            
         }
         List(List&& other): head{other.head}, tail{other.tail}, cnt{other.cnt}{
@@ -49,11 +52,13 @@ namespace linked_list {
             
         List& operator=(List&& rhs){ //cannot use const in the arg, we need to move it
             if(this==&rhs) return *this;
-            std::swap(head, rhs.head);
-            std::swap(tail, rhs.tail);
-            std::swap(cnt, rhs.cnt);
             
-            rhs.clear(); // is it a good idea to clean up rhs for the caller? or let rhs die when it is out-of-scope?
+            std::swap(head,rhs.head);
+            std::swap(tail,rhs.tail);
+            std::swap(cnt,rhs.cnt);
+
+            // is it better to clean up rhs for deterministic reason? or let rhs die when it is out-of-scope?
+            rhs.clear(); 
             
             return *this;
         }
@@ -68,14 +73,9 @@ namespace linked_list {
                     head=head->next;
                     delete old_head;
             }
-            //might as well reset everything to null or 0
             head=tail=nullptr;
             cnt=0;
          }
-        //okay no custom constructor so no normal, copy, copy assignment, move, move assignemnt, destructor
-        //using unquie_ptr is still a pain in doublely-linked list. do people actually do that in production?
-        //using shared_ptr feels so slow....
-        //"import std" ready when? 2099? we will be all dead in c++99
 
         void push(T v){
             Node<T>* new_tail=new Node<T>(v, nullptr, tail);
