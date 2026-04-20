@@ -20,9 +20,7 @@ namespace linked_list {
 
         template<typename T>
         T List<T>::pop(){
-            if(!head){
-                throw std::runtime_error("cannot pop empty list");
-            }
+            if(!head)throw std::runtime_error("cannot pop empty list");
             
             Node<T>* curr=head;
             Node<T>* prev=nullptr;
@@ -54,9 +52,8 @@ namespace linked_list {
 
         template<typename T>
         T List<T>::shift(){
-            if(!head){
-                throw std::runtime_error("cannot shift empty list");
-            }
+            if(!head)throw std::runtime_error("cannot shift empty list");
+
             //Node<T> *dummy= &Node<T>(-1); //likely not what people want, why assign a temporary?
             Node<T>* old_head=head;
             T res=std::move(head->val);
@@ -95,5 +92,9 @@ namespace linked_list {
             }
         }
 
-    template class List<int>; //
+    //let's waste more electricity ...adding more later
+    template class List<int>;
+    template class List<double>;
+    template class List<long long>;
+    //template class List<std::string>;
 }  // namespace linked_list
