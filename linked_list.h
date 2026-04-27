@@ -13,53 +13,93 @@ namespace linked_list {
 
     template<typename T>
     class List{
+
+    private:
         Node<T> *head=nullptr;
         Node<T> *tail=nullptr;
         int cnt{0};
 
+        void push_unshift_helper(T v, Node<T>* next=nullptr, Node<T>* prev=nullptr){
+            Node<T>* new_node=new Node<T>(v, next, prev);
+            if (!head) {
+                head=tail=new_node;
+            } else if(prev){
+                tail->next=new_node;
+                tail=new_node;
+            } else if(next){
+                head->prev=new_node;
+                head=new_node;
+            }
+            ++cnt;
+        }
+
+        T pop_shift_helper(Node<T>* target){
+            T res=std::move(target->val);
+            if(head==tail && head!=nullptr){
+                //only one node, after remove, everything is nullptr
+                head=tail=nullptr;
+            }else if(target==tail){
+                tail=tail->prev;
+                tail->next=nullptr;
+            } else if(target==head){
+                head=head->next;
+                head->prev=nullptr;
+            }
+
+            delete target;
+            --cnt;
+            return res;
+        }
+
     public:
-        List() = default; //explicity
+        List() = default; //explicit
+
+        //copy constructor
         List(const List& other): head{nullptr}, tail{nullptr}, cnt{0} {
             Node<T> *curr= other.head;
             while(curr){
-                push(curr->val); //DRY principle: reuse our push() to implmement copy constructor
+                push(curr->val); //DRY principle: reuse our push() to implement copy constructor
                 curr=curr->next;
             }
         }
-        List& operator=(const List& rhs){           
+
+        //copy assignment
+        List& operator=(const List& rhs){
             if(this==&rhs) return *this; //compare the actual memory location
 
             // use copy constructor
-            List<T> copy(rhs); 
+            List<T> copy(rhs);
 
             // move the new copy in, and move the old data into the copy
             // so the local "copy" will self-destruct with the old data
             std::swap(head,copy.head);
             std::swap(tail,copy.tail);
             std::swap(cnt,copy.cnt);
-            
+
             //but I might already allocate a lot of Nodes, what is the strategy to reuse them?
-            //in particualr, what if the count of rhs is not equal to lhs? messy implmentation incoming...
-            
-            return *this;            
+            //in particular, what if the list1.count != list2.count?
+            return *this;
         }
+
+        //move consturctor
         List(List&& other): head{other.head}, tail{other.tail}, cnt{other.cnt}{
-            // after moving, maintain other in a a valid state, rhs has null head, null tail, and 0 cnt
+            // after moving, maintain other in a valid state, rhs has null head, null tail, and 0 cnt
             other.head=nullptr;
             other.tail=nullptr;
             other.cnt=0;
         }
-            
+
+        //move assignment
         List& operator=(List&& rhs){ //cannot use const in the arg, we need to move it
             if(this==&rhs) return *this;
-            
+
             std::swap(head,rhs.head);
             std::swap(tail,rhs.tail);
             std::swap(cnt,rhs.cnt);
 
             // is it better to clean up rhs for deterministic reason? or let rhs die when it is out-of-scope?
-            rhs.clear(); 
-            
+            rhs.clear();
+
             return *this;
         }
         ~List(){
@@ -77,60 +117,29 @@ namespace linked_list {
             cnt=0;
          }
 
-        T pop_shift_helper(Node<T>* target){
-            T res=std::move(target->val);
-            if(head==tail && head!=nullptr){
-                //only one node
-                head=tail=nullptr;
-            }
-            if(target==tail){
-                tail=tail->prev;
-                tail->next=nullptr;
-            } else if(target==head){
-                head=head->next;
-                head->prev=nullptr;
-            }
-           
-            delete target;
-            --cnt;
-            return res;
-        }
-    
         T pop(){
             if(!tail) {throw std::runtime_error("cannot pop empty list");}
-            return pop_shift_helper(tail);         
-        }
-    
-        T shift(){
-            if(!head) {throw std::runtime_error("cannot shift empty list");}
-            return pop_shift_helper(head);         
+            return pop_shift_helper(tail);
         }
 
-        void push_unshift_helper(T v, Node<T>* next=nullptr, Node<T>* prev=nullptr){
-            Node<T>* new_node=new Node<T>(v, next, prev);
-            if(prev){
-                tail->next=new_node;
-                tail=new_node;
-            } else if(next){
-                head->prev=new_node;
-                head=new_node;
-            } else {
-                head=tail=new_node;
-            }
-            ++cnt;
+        T shift(){
+            if(!head) {throw std::runtime_error("cannot shift empty list");}
+            return pop_shift_helper(head);
         }
+
+
         void push(T v){
             push_unshift_helper(v, nullptr, tail);
         }
-    
-        void unshift(T v){           
+
+        void unshift(T v){
             push_unshift_helper(v, head, nullptr);
         }
-        
+
         int count(){
             return cnt;
         }
-    
+
         void erase(T v){
             // dummy node not that useful as in single-linked list, we already have the "prev"
             // Node<T> dummy{-1,head,nullptr};
@@ -144,14 +153,14 @@ namespace linked_list {
                         head=curr->next;
                         if(head) head->prev=nullptr; //isn't this necessary?house keeping new head->prev
                     }
-                    
+
                     if(curr->next) {
                         curr->next->prev=curr->prev;
                     } else {
                         tail=curr->prev;
                         if(tail) tail->next=nullptr; //isn't this necessary?house keeping new tail->next
                     }
-                    
+
                     delete curr;
                     --cnt;
                     return;
