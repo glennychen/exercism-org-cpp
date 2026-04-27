@@ -1,6 +1,7 @@
 #pragma once
 #include<cstddef> // C standard definitions for std::size_t
 #include<stdexcept>
+#include <limits.h>
 
 namespace linked_list {
     template<typename T>
@@ -15,11 +16,12 @@ namespace linked_list {
     class List{
 
     private:
-        Node<T> *head=nullptr;
-        Node<T> *tail=nullptr;
+        // invariant: That was one of the reasons I wanted to show the diagram. There are exactly two pointers pointing to each node.
+        Node<T> *head; //head is always there!
+        Node<T> *tail; //tail is always there!
         int cnt{0};
 
-        void push_unshift_helper(T v, Node<T>* next=nullptr, Node<T>* prev=nullptr){
+        void disaster_push_unshift_helper(T v, Node<T>* next=nullptr, Node<T>* prev=nullptr){
             Node<T>* new_node=new Node<T>(v, next, prev);
             if (!head) {
                 head=tail=new_node;
@@ -33,7 +35,8 @@ namespace linked_list {
             ++cnt;
         }
 
-        T pop_shift_helper(Node<T>* target){
+        T disaster_pop_shift_helper(Node<T>* target){
+            if(!tail || !head) {throw std::runtime_error("The list  is empty");}
             T res=std::move(target->val);
             if(head==tail && head!=nullptr){
                 //only one node, after remove, everything is nullptr
@@ -52,13 +55,25 @@ namespace linked_list {
         }
 
     public:
-        List() = default; //explicit
+        List(){
+            head = new Node<T>(T{});
+            tail = new Node<T>(T{});
+            head->next=tail;
+            tail->prev=head;
+            //note: cnt is not "two" because head and tail do not count
+        }
 
         //copy constructor
-        List(const List& other): head{nullptr}, tail{nullptr}, cnt{0} {
-            Node<T> *curr= other.head;
-            while(curr){
-                push(curr->val); //DRY principle: reuse our push() to implement copy constructor
+        List(const List& other) {
+            head=new Node<T>(T{});
+            tail=new Node<T>(T{});
+            head->next=tail;
+            tail->prev=head;
+            Node<T> *curr= other.head->next;
+
+            //copy all the way right before other's tail
+            while(curr!=other.tail){
+                push(curr->val);
                 curr=curr->next;
             }
         }
@@ -82,91 +97,121 @@ namespace linked_list {
         }
 
         //move consturctor
-        List(List&& other): head{other.head}, tail{other.tail}, cnt{other.cnt}{
-            // after moving, maintain other in a valid state, rhs has null head, null tail, and 0 cnt
-            other.head=nullptr;
-            other.tail=nullptr;
-            other.cnt=0;
+        List(List&& other){
+            //swap is a good idea in move assignment to swap both "valid" List
+            //in move constructor, I find that swapping garbage to the rhs is quite dangerous, especially if the compiler is passed by optimization -O3. (compiler is free to re-use garbage! who knows what can happen. Struct no longer 64byes align, someting has garbage pointer, which is another UB ....using swap is not worth it....)
+            head=other.head;
+            tail=other.tail;
+            cnt=other.cnt;
+
+            //other must be in valid state, we need to give other the valid head and tail
+            other.head=new Node<T>(T{});
+            other.tail=new Node<T>(T{});
+            other.head->next=other.tail;
+            other.tail->prev=other.head;
         }
 
         //move assignment
         List& operator=(List&& rhs){ //cannot use const in the arg, we need to move it
             if(this==&rhs) return *this;
-
             std::swap(head,rhs.head);
             std::swap(tail,rhs.tail);
             std::swap(cnt,rhs.cnt);
-
-            // is it better to clean up rhs for deterministic reason? or let rhs die when it is out-of-scope?
-            rhs.clear();
-
+            //let's not call rhs.clear()
             return *this;
         }
         ~List(){
             clear(); //because std::vector also has one
-            head=tail=nullptr;
-            cnt=0;
+            //The only time we can delete the dummy head and tail value
+            delete head;
+            delete tail;
         }
         void clear(){
-            while(head){
-                    Node<T>* old_head=head;
-                    head=head->next;
-                    delete old_head;
+            if(head->next!=tail){
+                Node<T>* curr=head->next;
+                while(curr!=tail){
+                    Node<T>* to_delete=curr;
+                    curr=curr->next;
+                    delete to_delete;
+                }
             }
-            head=tail=nullptr;
-            cnt=0;
+
+            //note: do not delete head and tail yet, this list MUST be in valid state
+            //valid state include the case after the move constructor, 
+            //the invariant is head and tail are permenant, if the List is valid 
+            //A list with 0 elements are valid, for example
+            head->next=tail;
+            tail->prev=head;
+            cnt=0; //just zero out this block of memory
          }
-
-        T pop(){
-            if(!tail) {throw std::runtime_error("cannot pop empty list");}
-            return pop_shift_helper(tail);
-        }
-
-        T shift(){
-            if(!head) {throw std::runtime_error("cannot shift empty list");}
-            return pop_shift_helper(head);
-        }
-
-
+    
         void push(T v){
-            push_unshift_helper(v, nullptr, tail);
+            insert_after(tail->prev,v);
         }
 
         void unshift(T v){
-            push_unshift_helper(v, head, nullptr);
+            insert_after(head,v); 
         }
 
-        int count(){
-            return cnt;
+        void insert_after(Node<T>* prev, T v){
+            Node<T>* new_node=new Node<T>(v);
+            new_node->prev=prev;
+            new_node->next=prev->next;
+            prev->next->prev=new_node;
+            prev->next=new_node;
+            ++cnt;
+        }
+    
+        //BUGGY don't use. You can accidentally remove head. Use this->remove() instead
+        // T remove_after(Node<T>* prev){
+        //     if(head->next==tail) return -1; //list empty
+        //     Node<T>* to_delete=prev->next            
+        //     prev->next=to_delete->next;
+        //     prev->next->prev=prev;
+
+        //     T res=std::move(to_delete->val);
+        //     --cnt;
+            
+        //     return res;
+        // }
+        //BUGGY don't use
+
+        T pop(){
+            return remove(tail->prev);            
         }
 
+        T shift(){
+           return remove(head->next);
+        }  
+
+        T remove(Node<T>* to_delete){
+            if(head->next==tail) throw std::runtime_error("the list is empty");
+            to_delete->prev->next=to_delete->next;
+            to_delete->next->prev=to_delete->prev;
+
+            T res=std::move(to_delete->val);
+            delete to_delete;
+            --cnt;
+            
+            return res;
+        }
+    
         void erase(T v){
-            // dummy node not that useful as in single-linked list, we already have the "prev"
-            // Node<T> dummy{-1,head,nullptr};
-            // Node<T>* d=&dummy;
-            Node<T>* curr=head;
-            while(curr){
+            if(head->next==tail) throw std::runtime_error("the list is empty");
+            Node<T>* curr=head->next;
+            while(curr!=tail){
                 if(curr->val==v){
-                    if(curr->prev){
-                        curr->prev->next=curr->next;
-                    } else {
-                        head=curr->next;
-                        if(head) head->prev=nullptr; //isn't this necessary?house keeping new head->prev
-                    }
-
-                    if(curr->next) {
-                        curr->next->prev=curr->prev;
-                    } else {
-                        tail=curr->prev;
-                        if(tail) tail->next=nullptr; //isn't this necessary?house keeping new tail->next
-                    }
-
-                    delete curr;
-                    --cnt;
+                    remove(curr);
                     return;
                 }
                 curr=curr->next;
             }
+        }
+    
+
+
+        int count() const{
+            return cnt;
         }
     };
 
